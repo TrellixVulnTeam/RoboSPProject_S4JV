@@ -1,0 +1,20 @@
+item {
+  id: 1
+  name: 'money'
+}
+
+item {
+  id: 2
+  name: 'bottle'
+}
+
+item {
+  id: 3
+  name: 'convert'
+}
+
+item {
+  id: 4
+  name: 'banana'
+}
+
