@@ -11,10 +11,22 @@ from serial.tools import list_ports
 from time import sleep
 from pydobot import Dobot
 import speech_recognition as sr
+from scipy.optimize import fsolve
+INF = 10**9
+def equations(p):
+	x, y = p
+	return (((x3-x2)**2 + (y3-y2)**2 - a**2), ((x3-x1)**2 + (y3-y1)**2 - b**2))
 # import win32com.client as wincl
 # from simpleTest import armMotor, modelInit, modelExit
 # import SpeechRecognition as sr
- 
+def findCoords(x1, y1, x2, y2, a, b):
+	# x1, y1, x2, y2, a, b = round(x1, 0), round(y1, 0), round(x2, 0), round(y2, 0), round(a, 0), round(b, 0), 
+	def equations(p):
+		x3, y3 = p
+		return (((x3-x2)**2 + (y3-y2)**2 - b**2), ((x3-x1)**2 + (y3-y1)**2 - a**2))
+	x3, y3 =  fsolve(equations, (0, 0))
+	print(x3, y3)
+	return [x3 - 70, y3 + 70]
 
 def modelInit():
 	pass
@@ -94,10 +106,13 @@ def toBox(us_obj):
 sendToModel()
 device.move_to(J1, J2, J3, J4, wait=True)
 sendToModel()
+(x1, y1, _,_,_,_,_,_) = device.pose()
+
 op_dot_x_1, op_dot_y_1 = armDetection()
 # device.move_to(J1-180, J2, J3, J4, wait=True)
 # device.move_to(J1, J2, J3, J4, wait=True)
 device.move_to(J1+180, J2, J3, J4, wait=True)
+(x2, y2, _,_,_,_,_,_) = device.pose()
 sendToModel()
 op_dot_x_2, op_dot_y_2 = armDetection()
 device.move_to(J1, J2, J3, J4, wait=True)
@@ -138,8 +153,8 @@ while True:
 
 	if user_object == 5:
 		device.move_to(J1, J2, J3, J4, wait=True)
-		# sendToModel()
-		# modelExit()
+		sendToModel()
+		modelExit()
 		exit()
 	radius = findLine([op_dot_x_1, op_dot_y_1], [op_dot_x_2, op_dot_y_2])/2
 	R = radius
@@ -174,68 +189,93 @@ while True:
 
 		(x, y, z, r, j1, j2, j3, j4) = device.pose()
 		xn, yn = (user_objs[i]['xmin'] + user_objs[i]['xmax'])/2, (user_objs[i]['ymin'] + user_objs[i]['ymax'])/2
-		b_x = xn
-		b_y = center_y
-		b = findLine([center_x, center_y], [b_x, b_y])
-		obj_dot_x = b_x
-		print("----------\n\n\n\nR="+str(R)+"\nb="+str(b)+"\ncenter_x, center_y="+str(center_x), str(center_y)+"\n\n\n---------")
-		print(op_dot_x_1, op_dot_y_1)
-		print(op_dot_x_2, op_dot_y_2)
-		obj_dot_y = b_y + sqrt(R**2 - b**2)
-		xaaa, xbbb = armDetection()
-		h = (findLine([op_dot_x_1, op_dot_y_1], [obj_dot_x, obj_dot_y]))/(2*R)
-		alpha = 2*(asin(h))
-		alpha = degrees(alpha)
-		print(alpha)
+		a_, b_ = findLine([xn, yn], [op_dot_x_1, op_dot_y_1]), findLine([xn, yn], [op_dot_x_2, op_dot_y_2])
+		
 		(x, y, z, r, j1, j2, j3, j4) = device.pose()
-		print("---------------\n-----------------\n----------------\n-----------------\n----------\n-----------\n\n\n\n")
-		# MODE_PTP_MOVJ_ANGLE
-		(x, y, z, r, j1, j2, j3, j4) = device.pose()
-		device.move_to(J1, J2, J3, J4, wait=True)
-		sendToModel()
-		(x, y, z, r, j1, j2, j3, j4) = device.pose()
-		device.move_to(j1+alpha+15, j2, j3, j4, wait=True)
-		sendToModel()
-		try:
-			while True:
-				(x, y, z, r, j1, j2, j3, j4) = device.pose()
-				xnnn, ynnn = armDetection()
-				if xn>xnnn:
-					break
-				device.move_to(j1+1, j2, j3, j4, wait=True)
-				sendToModel()
-		except:
-			device.move_to(j1+1, j2, j3, j4, wait=True)
-		try:
-			while True:
-				(x, y, z, r, j1, j2, j3, j4) = device.pose()
-				xnnn, ynnn = armDetection()
-				if xn<xnnn:
-					break
-				device.move_to(j1-1, j2, j3, j4, wait=True)
-				sendToModel()
-		except:
-			device.move_to(j1-1, j2, j3, j4, wait=True)
-		try:
-			while True:
-				(x, y, z, r, j1, j2, j3, j4) = device.pose()
-				xnnn, ynnn = armDetection()
-				if yn-POPR>ynnn:
-					break
-				device.move_to(j1, j2+3, j3, j4, wait=True)
-				sendToModel()
-		except:
-			device.move_to(j1, j2+3, j3, j4, wait=True)
-		try:
-			while True:
-				(x, y, z, r, j1, j2, j3, j4) = device.pose()
-				xnnn, ynnn = armDetection()
-				if yn-POPR<ynnn:
-					break
-				device.move_to(j1, j2-3, j3, j4, wait=True)
-				sendToModel()
-		except:
-			device.move_to(j1, j2-3, j3, j4, wait=True)
+		print("+++++_+_+_+++++++")
+		obj_coords_man = findCoords(x1, y1, x2, y2, a_, b_)
+		print(obj_coords_man)
+		pos_pr = device.pose()
+
+		i = 0
+		if obj_coords_man[0]**2 + obj_coords_man[1]**2 > 307**2:
+			# ДОДЕЛАТЬ ТУТ
+			xy = (obj_coords_man[0]**2 + obj_coords_man[1]**2)
+			__y = obj_coords_man[1]
+			__x = obj_coords_man[0]
+			c_to_move_y = (__y*307)/xy
+			c_to_move_x = (307**2 - c_to_move_y**2)**(0.5)
+			if __x < 0:
+				c_to_move_x = -c_to_move_x
+			obj_coords_man = [c_to_move_x, c_to_move_y]
+			print(obj_coords_man)
+		device.move_to_xyz(obj_coords_man[0], obj_coords_man[1],z, r, wait=True)
+
+
+		# sleep(0.1)
+		# b_x = xn
+		# b_y = center_y
+		# b = findLine([center_x, center_y], [b_x, b_y])
+		# obj_dot_x = b_x
+		# print("----------\n\n\n\nR="+str(R)+"\nb="+str(b)+"\ncenter_x, center_y="+str(center_x), str(center_y)+"\n\n\n---------")
+		# print(op_dot_x_1, op_dot_y_1)
+		# print(op_dot_x_2, op_dot_y_2)
+		# obj_dot_y = b_y + sqrt(R**2 - b**2)
+		# xaaa, xbbb = armDetection()
+		# h = (findLine([op_dot_x_1, op_dot_y_1], [obj_dot_x, obj_dot_y]))/(2*R)
+		# alpha = 2*(asin(h))
+		# alpha = degrees(alpha)
+		# print(alpha)
+		# (x, y, z, r, j1, j2, j3, j4) = device.pose()
+		# print("---------------\n-----------------\n----------------\n-----------------\n----------\n-----------\n\n\n\n")
+		# # MODE_PTP_MOVJ_ANGLE
+		# (x, y, z, r, j1, j2, j3, j4) = device.pose()
+		# device.move_to(J1, J2, J3, J4, wait=True)
+		# sendToModel()
+		# (x, y, z, r, j1, j2, j3, j4) = device.pose()
+		# device.move_to(j1+alpha+15, j2, j3, j4, wait=True)
+		# sendToModel()
+		# try:
+		# 	while True:
+		# 		(x, y, z, r, j1, j2, j3, j4) = device.pose()
+		# 		xnnn, ynnn = armDetection()
+		# 		if xn>xnnn:
+		# 			break
+		# 		device.move_to(j1+1, j2, j3, j4, wait=True)
+		# 		sendToModel()
+		# except:
+		# 	device.move_to(j1+1, j2, j3, j4, wait=True)
+		# try:
+		# 	while True:
+		# 		(x, y, z, r, j1, j2, j3, j4) = device.pose()
+		# 		xnnn, ynnn = armDetection()
+		# 		if xn<xnnn:
+		# 			break
+		# 		device.move_to(j1-1, j2, j3, j4, wait=True)
+		# 		sendToModel()
+		# except:
+		# 	device.move_to(j1-1, j2, j3, j4, wait=True)
+		# try:
+		# 	while True:
+		# 		(x, y, z, r, j1, j2, j3, j4) = device.pose()
+		# 		xnnn, ynnn = armDetection()
+		# 		if yn-POPR>ynnn:
+		# 			break
+		# 		device.move_to(j1, j2+3, j3, j4, wait=True)
+		# 		sendToModel()
+		# except:
+		# 	device.move_to(j1, j2+3, j3, j4, wait=True)
+		# try:
+		# 	while True:
+		# 		(x, y, z, r, j1, j2, j3, j4) = device.pose()
+		# 		xnnn, ynnn = armDetection()
+		# 		if yn-POPR<ynnn:
+		# 			break
+		# 		device.move_to(j1, j2-3, j3, j4, wait=True)
+		# 		sendToModel()
+		# except:
+		# 	device.move_to(j1, j2-3, j3, j4, wait=True)
+		#-----------------
 		# while True:
 		# 	(x, y, z, r, j1, j2, j3, j4) = device.pose()
 		# 	xnnn, ynnn = armDetection()
@@ -250,17 +290,17 @@ while True:
 		# 	device.move_to(j1, j2, j3, j4-1, wait=True)
 		if user_object == 1:
 			(x, y, z, r, j1, j2, j3, j4) = device.pose()
-			device.move_to_xyz(x, y, -62, r, wait=True)
+			device.move_to_xyz(obj_coords_man[0], obj_coords_man[1], -62, r, wait=True)
 			sendToModel()
 			toBox(1)
 		if user_object == 2:
 			(x, y, z, r, j1, j2, j3, j4) = device.pose()
-			device.move_to_xyz(x, y, 75, r, wait=True)
+			device.move_to_xyz(obj_coords_man[0], obj_coords_man[1], 75, r, wait=True)
 			sendToModel()
 			toBox(2)
 		if user_object == 3:
 			(x, y, z, r, j1, j2, j3, j4) = device.pose()
-			device.move_to_xyz(x, y, -71, r, wait=True)
+			device.move_to_xyz(obj_coords_man[0], obj_coords_man[1], -71, r, wait=True)
 			sendToModel()
 			toBox(3)
 	try:
